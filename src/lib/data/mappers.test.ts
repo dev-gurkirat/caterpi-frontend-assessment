@@ -8,11 +8,13 @@ import {
   normalizeVerificationStatus,
   parseBooleanFlag,
   parseScore,
+  pickHomeEvidenceAssessmentId,
   toPrivatePassport,
   toPublicPassport,
 } from "@/lib/data/mappers";
 import { calculateOverallProgress, countVerifiedLevels } from "@/lib/domain/progress";
 import { getEvidenceUnavailableMessage } from "@/lib/domain/labels";
+import { getEvidencePreviewHref } from "@/lib/domain/home-links";
 import { formatCapabilityScore, scoreToChartRatio } from "@/lib/domain/scores";
 import { isUuid } from "@/lib/data/ids";
 import { PRIVATE_TALENT_COLUMNS, PUBLIC_TALENT_COLUMNS } from "@/lib/data/schema";
@@ -228,6 +230,37 @@ describe("evidence mapping", () => {
     );
   });
 
+  it("picks a home shortcut assessment that has a usable file", () => {
+    const now = new Date("2026-09-11T10:00:00.000Z");
+    const availableId = "as-seo-fundamentals";
+
+    expect(
+      pickHomeEvidenceAssessmentId(
+        [
+          {
+            assessmentId: "as-seo-applied",
+            storagePath: null,
+            expiresAt: null,
+            submittedAt: "2026-05-04T11:30:00.000Z",
+          },
+          {
+            assessmentId: "as-content",
+            storagePath: "user-1/expired-content.txt",
+            expiresAt: "2020-01-01T00:00:00.000Z",
+            submittedAt: "2026-04-18T14:00:00.000Z",
+          },
+          {
+            assessmentId: availableId,
+            storagePath: "user-1/seo-fundamentals.txt",
+            expiresAt: null,
+            submittedAt: "2026-03-12T09:00:00.000Z",
+          },
+        ],
+        now,
+      ),
+    ).toBe(availableId);
+  });
+
   it("maps incomplete assessment rows instead of dropping them", () => {
     const mapped = mapAssessmentSummary({
       id: "as-incomplete",
@@ -250,6 +283,21 @@ describe("public talent columns", () => {
   it("does not select email or other private fields for public profiles", () => {
     expect(PUBLIC_TALENT_COLUMNS).not.toMatch(/email|is_public/);
     expect(PRIVATE_TALENT_COLUMNS).not.toMatch(/email/);
+  });
+});
+
+describe("home evidence preview", () => {
+  it("opens a real assessment route instead of a capability page", () => {
+    const assessmentId = "3b1c0f2a-8d44-4e1a-9c3f-2a7b6d1e0c9a";
+
+    expect(getEvidencePreviewHref(assessmentId, true)).toBe(
+      `/passport/assessments/${assessmentId}`,
+    );
+    expect(getEvidencePreviewHref(assessmentId, true)).not.toContain(
+      "/capabilities/",
+    );
+    expect(getEvidencePreviewHref(null, true)).toBe("/passport");
+    expect(getEvidencePreviewHref(null, false)).toBe("/login");
   });
 });
 

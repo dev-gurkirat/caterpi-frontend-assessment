@@ -3,6 +3,7 @@ import {
   mapAssessmentSummary,
   mapCapabilitySummary,
   parseBooleanFlag,
+  pickHomeEvidenceAssessmentId,
   toPrivatePassport,
   toPublicPassport,
 } from "@/lib/data/mappers";
@@ -15,6 +16,7 @@ import {
   TABLES,
   type AssessmentResultRow,
   type CapabilityLevelRow,
+  type EvidenceRow,
   type TalentCapabilityRow,
   type TalentRow,
 } from "@/lib/data/schema";
@@ -160,6 +162,59 @@ export async function updatePassportVisibility(
       username: (data as TalentRow).username,
     },
   };
+}
+
+type EvidenceWithAssessmentRow = EvidenceRow & {
+  assessment_results?:
+    | { id: string; talent_id?: string; submitted_at: string | null }
+    | { id: string; talent_id?: string; submitted_at: string | null }[]
+    | null;
+};
+
+export async function getHomeEvidenceAssessmentId(): Promise<DataResult<string>> {
+  const supabase = await createServerSupabaseClient();
+
+  if (!supabase) {
+    return unavailable(LOAD_ERROR_MESSAGE);
+  }
+
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    return { status: "unauthenticated" };
+  }
+
+  const { data, error } = await supabase
+    .from(TABLES.evidence)
+    .select(
+      "id, assessment_id, storage_path, expires_at, assessment_results!inner(id, talent_id, submitted_at)",
+    )
+    .eq("assessment_results.talent_id", user.id);
+
+  if (error) {
+    return unavailable(LOAD_ERROR_MESSAGE);
+  }
+
+  const candidates = ((data ?? []) as EvidenceWithAssessmentRow[]).map((row) => {
+    const related = Array.isArray(row.assessment_results)
+      ? row.assessment_results[0]
+      : row.assessment_results;
+
+    return {
+      assessmentId: row.assessment_id,
+      storagePath: row.storage_path,
+      expiresAt: row.expires_at,
+      submittedAt: related?.submitted_at ?? null,
+    };
+  });
+
+  const assessmentId = pickHomeEvidenceAssessmentId(candidates);
+
+  if (!assessmentId) {
+    return { status: "empty" };
+  }
+
+  return { status: "ok", data: assessmentId };
 }
 
 export async function getCapabilityAssessments(

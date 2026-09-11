@@ -142,6 +142,39 @@ export function fileNameFromStoragePath(path: string | null | undefined): string
   return parts[parts.length - 1] ?? null;
 }
 
+export type HomeEvidenceCandidate = {
+  assessmentId: string;
+  storagePath: string | null;
+  expiresAt: string | null;
+  submittedAt: string | null;
+};
+
+/** Prefer an assessment with a usable file so the home shortcut is not a missing-file demo. */
+export function pickHomeEvidenceAssessmentId(
+  rows: HomeEvidenceCandidate[],
+  now = new Date(),
+): string | null {
+  const available = rows
+    .filter((row) =>
+      mapEvidenceRecord(
+        {
+          id: row.assessmentId,
+          assessment_id: row.assessmentId,
+          storage_path: row.storagePath,
+          expires_at: row.expiresAt,
+        },
+        now,
+      ).available,
+    )
+    .sort((left, right) => {
+      const leftTime = left.submittedAt ? Date.parse(left.submittedAt) : 0;
+      const rightTime = right.submittedAt ? Date.parse(right.submittedAt) : 0;
+      return rightTime - leftTime;
+    });
+
+  return available[0]?.assessmentId ?? null;
+}
+
 export function mapEvidenceRecord(
   row: EvidenceRow,
   now = new Date(),

@@ -7,13 +7,16 @@ import { Card } from "@/components/ui/card";
 import { HeaderBar } from "@/components/ui/header-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { getAuthenticatedUser } from "@/lib/auth/session";
-import { getMyPassport } from "@/lib/data/passport";
+import { getHomeEvidenceAssessmentId, getMyPassport } from "@/lib/data/passport";
+import { getEvidencePreviewHref } from "@/lib/domain/home-links";
 import { ROUTES } from "@/lib/domain/routes";
 
 export default async function HomePage() {
   const user = await getAuthenticatedUser();
   const signedIn = Boolean(user);
-  const passportResult = signedIn ? await getMyPassport() : null;
+  const [passportResult, assessmentResult] = signedIn
+    ? await Promise.all([getMyPassport(), getHomeEvidenceAssessmentId()])
+    : [null, null];
   const myUsername =
     passportResult?.status === "ok" ? passportResult.data.username : null;
   const isPublic =
@@ -21,6 +24,10 @@ export default async function HomePage() {
   const publicHref = myUsername
     ? ROUTES.publicPassport(myUsername)
     : ROUTES.login;
+  const evidenceHref = getEvidencePreviewHref(
+    assessmentResult?.status === "ok" ? assessmentResult.data : null,
+    signedIn,
+  );
 
   const previewLinks = [
     {
@@ -38,7 +45,7 @@ export default async function HomePage() {
       label: "Capability",
     },
     {
-      href: ROUTES.capability("seo"),
+      href: evidenceHref,
       title: "Assessment evidence",
       description:
         "Title, level, score, status, date, assessor, and supporting files.",

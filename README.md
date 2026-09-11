@@ -2,6 +2,16 @@
 
 Frontend for the Caterpi Talent Skills Passport assessment: an authenticated passport, assessment evidence, a public profile at `/p/[username]`, and a visibility toggle. All passport and assessment values come from the supplied Supabase project.
 
+## Live demo
+
+- **Repository:** [github.com/dev-gurkirat/caterpi-frontend-assessment](https://github.com/dev-gurkirat/caterpi-frontend-assessment)
+- **Deployed app:** Run `npx vercel login`, then `npx vercel --prod` from this folder, and replace this line with the `*.vercel.app` URL it prints.
+
+Set these Vercel project environment variables (public values only, same as `.env.local`):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
 ## Setup
 
 1. Install [Node.js](https://nodejs.org/) 22 or later.
